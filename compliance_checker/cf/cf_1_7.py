@@ -5,8 +5,8 @@ from warnings import warn
 
 import numpy as np
 import pyproj
-import regex
 
+import regex
 from compliance_checker import cfutil
 from compliance_checker.base import BaseCheck, Result, TestCtx
 from compliance_checker.cf.appendix_d import dimless_vertical_coordinates_1_7
@@ -51,11 +51,11 @@ class CF1_7Check(CF1_6Check):
                 "cf_section": "2.6.3",
             },
             "scale_factor": {"Type": "N", "attr_loc": {"D", "C"}, "cf_section": "8.1"},
-        }
+        },
     )
 
     def __init__(self, options=None):
-        super(CF1_7Check, self).__init__(options)
+        super().__init__(options)
 
         self.cell_methods = cell_methods17
         self.grid_mapping_dict = grid_mapping_dict17
@@ -130,7 +130,7 @@ class CF1_7Check(CF1_6Check):
                         len(variable.actual_range) != 2
                     ):  # TODO is the attr also a numpy array? if so, .size
                         msgs.append(
-                            "actual_range of '{}' must be 2 elements".format(name)
+                            f"actual_range of '{name}' must be 2 elements",
                         )
                         ret_val.append(
                             Result(  # putting result into list
@@ -138,20 +138,20 @@ class CF1_7Check(CF1_6Check):
                                 (score, out_of),
                                 self.section_titles["2.5"],
                                 msgs,
-                            )
+                            ),
                         )
                         continue  # no need to keep checking if already completely wrong
                     else:
                         score += 1
                 except TypeError:  # in case it's just a single number
-                    msgs.append("actual_range of '{}' must be 2 elements".format(name))
+                    msgs.append(f"actual_range of '{name}' must be 2 elements")
                     ret_val.append(
                         Result(  # putting result into list
                             BaseCheck.HIGH,
                             (score, out_of),
                             self.section_titles["2.5"],
                             msgs,
-                        )
+                        ),
                     )
                     continue
 
@@ -164,12 +164,11 @@ class CF1_7Check(CF1_6Check):
                     # fail.
                     out_of += 1
                     if not np.isclose(
-                        variable.actual_range[0], variable[:].min()
+                        variable.actual_range[0],
+                        variable[:].min(),
                     ) or not np.isclose(variable.actual_range[1], variable[:].max()):
                         msgs.append(
-                            "actual_range elements of '{}' inconsistent with its min/max values".format(
-                                name
-                            )
+                            f"actual_range elements of '{name}' inconsistent with its min/max values",
                         )
                     else:
                         score += 1
@@ -181,9 +180,7 @@ class CF1_7Check(CF1_6Check):
                         variable.actual_range[1] > variable.valid_range[1]
                     ):
                         msgs.append(
-                            '"{}"\'s actual_range must be within valid_range'.format(
-                                name
-                            )
+                            f'"{name}"\'s actual_range must be within valid_range',
                         )
                     else:
                         score += 1
@@ -194,9 +191,7 @@ class CF1_7Check(CF1_6Check):
                     out_of += 1
                     if variable.actual_range[0] < variable.valid_min:
                         msgs.append(
-                            '"{}"\'s actual_range first element must be >= valid_min ({})'.format(
-                                name, variable.valid_min
-                            )
+                            f'"{name}"\'s actual_range first element must be >= valid_min ({variable.valid_min})',
                         )
                     else:
                         score += 1
@@ -204,17 +199,18 @@ class CF1_7Check(CF1_6Check):
                     out_of += 1
                     if variable.actual_range[1] > variable.valid_max:
                         msgs.append(
-                            '"{}"\'s actual_range second element must be <= valid_max ({})'.format(
-                                name, variable.valid_max
-                            )
+                            f'"{name}"\'s actual_range second element must be <= valid_max ({variable.valid_max})',
                         )
                     else:
                         score += 1
 
             ret_val.append(
                 Result(  # putting result into list
-                    BaseCheck.HIGH, (score, out_of), self.section_titles["2.5"], msgs
-                )
+                    BaseCheck.HIGH,
+                    (score, out_of),
+                    self.section_titles["2.5"],
+                    msgs,
+                ),
             )
         return ret_val
 
@@ -236,9 +232,11 @@ class CF1_7Check(CF1_6Check):
         # Note that test does not check monotonicity
         ret_val = []
         reasoning = []
+
         for variable_name, boundary_variable_name in cfutil.get_cell_boundary_map(
-            ds
+            ds,
         ).items():
+            
             variable = ds.variables[variable_name]
             valid = True
             reasoning = []
@@ -249,10 +247,8 @@ class CF1_7Check(CF1_6Check):
             if boundary_variable_name not in ds.variables:
                 valid = False
                 reasoning.append(
-                    "Boundary variable {} referenced by {} not ".format(
-                        boundary_variable_name, variable.name
-                    )
-                    + "found in dataset variables"
+                    f"Boundary variable {boundary_variable_name} referenced by {variable.name} not "
+                    + "found in dataset variables",
                 )
             else:
                 boundary_variable = ds.variables[boundary_variable_name]
@@ -263,31 +259,22 @@ class CF1_7Check(CF1_6Check):
             if boundary_variable.ndim < 2:
                 valid = False
                 reasoning.append(
-                    "Boundary variable {} specified by {}".format(
-                        boundary_variable.name, variable.name
-                    )
+                    f"Boundary variable {boundary_variable.name} specified by {variable.name}"
                     + " should have at least two dimensions to enclose the base "
-                    + "case of a one dimensionsal variable"
+                    + "case of a one dimensionsal variable",
                 )
             if boundary_variable.ndim != variable.ndim + 1:
                 valid = False
                 reasoning.append(
-                    "The number of dimensions of the variable %s is %s, but the "
-                    "number of dimensions of the boundary variable %s is %s. The boundary variable "
-                    "should have %s dimensions"
-                    % (
-                        variable.name,
-                        variable.ndim,
-                        boundary_variable.name,
-                        boundary_variable.ndim,
-                        variable.ndim + 1,
-                    )
+                    f"The number of dimensions of the variable {variable.name} is {variable.ndim}, but the "
+                    f"number of dimensions of the boundary variable {boundary_variable.name} is {boundary_variable.ndim}. The boundary variable "
+                    f"should have {variable.ndim + 1} dimensions",
                 )
             if variable.dimensions[:] != boundary_variable.dimensions[: variable.ndim]:
                 valid = False
                 reasoning.append(
-                    "Boundary variable coordinates (for {}) are in improper order: {}. Bounds-specific dimensions should be last"
-                    "".format(variable.name, boundary_variable.dimensions)
+                    f"Boundary variable coordinates (for {variable.name}) are in improper order: {boundary_variable.dimensions}. Bounds-specific dimensions should be last"
+                    "",
                 )
 
             # 7.1 Required 2/5: continue
@@ -299,12 +286,7 @@ class CF1_7Check(CF1_6Check):
             ):
                 valid = False
                 reasoning.append(
-                    "Dimension {} of boundary variable (for {}) must have at least {} elements to form a simplex/closed cell with previous dimensions {}.".format(
-                        boundary_variable.name,
-                        variable.name,
-                        len(variable.dimensions) + 1,
-                        boundary_variable.dimensions[:-1],
-                    )
+                    f"Dimension {boundary_variable.name} of boundary variable (for {variable.name}) must have at least {len(variable.dimensions) + 1} elements to form a simplex/closed cell with previous dimensions {boundary_variable.dimensions[:-1]}.",
                 )
 
             # 7.1 Required 3/5:
@@ -312,10 +294,8 @@ class CF1_7Check(CF1_6Check):
             if boundary_variable.dtype.kind not in "biufc":
                 valid = False
                 reasoning.append(
-                    "Boundary variable {} specified by {}".format(
-                        boundary_variable.name, variable.name
-                    )
-                    + "must be a numeric data type "
+                    f"Boundary variable {boundary_variable.name} specified by {variable.name}"
+                    + "must be a numeric data type ",
                 )
 
             # 7.1 Required 4/5:
@@ -327,15 +307,9 @@ class CF1_7Check(CF1_6Check):
                         if getattr(variable, item) != getattr(boundary_variable, item):
                             valid = False
                             reasoning.append(
-                                "'{}' has attr '{}' with value '{}' that does not agree "
-                                "with its associated variable ('{}')'s attr value '{}'"
-                                "".format(
-                                    boundary_variable_name,
-                                    item,
-                                    getattr(boundary_variable, item),
-                                    variable.name,
-                                    getattr(variable, item),
-                                )
+                                f"'{boundary_variable_name}' has attr '{item}' with value '{getattr(boundary_variable, item)}' that does not agree "
+                                f"with its associated variable ('{variable.name}')'s attr value '{getattr(variable, item)}'"
+                                "",
                             )
 
             # 7.1 Required 5/5:
@@ -345,9 +319,7 @@ class CF1_7Check(CF1_6Check):
                 if not hasattr(boundary_variable, "formula_terms"):
                     valid = False
                     reasoning.append(
-                        "'{}' has 'formula_terms' attr, bounds variable '{}' must also have 'formula_terms'".format(
-                            variable_name, boundary_variable_name
-                        )
+                        f"'{variable_name}' has 'formula_terms' attr, bounds variable '{boundary_variable_name}' must also have 'formula_terms'",
                     )
 
             # 7.1 Recommendations 2/2
@@ -372,13 +344,14 @@ class CF1_7Check(CF1_6Check):
                 if unwanted_attributes:
                     valid = False
                     reasoning.append(
-                        "The Boundary variables '{}' should not have the attributes: '{}'".format(
-                            boundary_variable_name, unwanted_attributes
-                        )
+                        f"The Boundary variables '{boundary_variable_name}' should not have the attributes: '{unwanted_attributes}'",
                     )
 
             result = Result(
-                BaseCheck.MEDIUM, valid, self.section_titles["7.1"], reasoning
+                BaseCheck.MEDIUM,
+                valid,
+                self.section_titles["7.1"],
+                reasoning,
             )
             ret_val.append(result)
         return ret_val
@@ -394,7 +367,7 @@ class CF1_7Check(CF1_6Check):
         ret_val = []
         reasoning = []
         for variable_name, boundary_variable_name in cfutil.get_cell_boundary_map(
-            ds
+            ds,
         ).items():
             valid = True
 
@@ -409,21 +382,18 @@ class CF1_7Check(CF1_6Check):
                     ):
                         valid = False
                         reasoning.append(
-                            "The points specified by the coordinate variable {} ({})"
+                            f"The points specified by the coordinate variable {variable_name} ({variable[ii]})"
                             " lie outside the boundary of the cell specified by the "
-                            "associated boundary variable {} ({})".format(
-                                variable_name,
-                                variable[ii],
-                                boundary_variable_name,
-                                boundary_variable[ii],
-                            )
+                            f"associated boundary variable {boundary_variable_name} ({boundary_variable[ii]})",
                         )
 
                 result = Result(
-                    BaseCheck.MEDIUM, valid, self.section_titles["7.1"], reasoning
+                    BaseCheck.MEDIUM,
+                    valid,
+                    self.section_titles["7.1"],
+                    reasoning,
                 )
                 ret_val.append(result)
-                print(ret_val)
             return ret_val
 
     def check_cell_measures(self, ds):
@@ -453,74 +423,26 @@ class CF1_7Check(CF1_6Check):
         :return: List of results
         """
         ret_val = []
-        reasoning = []
         variables = ds.get_variables_by_attributes(
-            cell_measures=lambda c: c is not None
+            cell_measures=lambda c: c is not None,
         )
-        for var in variables:
-            search_str = r"^(?:area|volume): (\w+)$"
-            search_res = regex.search(search_str, var.cell_measures)
-            if not search_res:
-                valid = False
-                reasoning.append(
-                    "The cell_measures attribute for variable {} "
-                    "is formatted incorrectly.  It should take the"
-                    " form of either 'area: cell_var' or "
-                    "'volume: cell_var' where cell_var is the "
-                    "variable describing the cell measures".format(var.name)
-                )
+        try:
+            external_variables_str = ds.getncattr("external_variables")
+            if external_variables_str is not None:
+                external_variables_names = set(external_variables_str.split(" "))
             else:
-                valid = True
-                cell_meas_var_name = search_res.groups()[0]
-                # TODO: cache previous results
-
-                # if the dataset has external_variables, get it
-                try:
-                    external_variables = ds.getncattr("external_variables")
-                except AttributeError:
-                    external_variables = []
-                if cell_meas_var_name not in ds.variables:
-                    if cell_meas_var_name not in external_variables:
-                        valid = False
-                        reasoning.append(
-                            "Cell measure variable {} referred to by {} is not present in dataset variables".format(
-                                cell_meas_var_name, var.name
-                            )
-                        )
-                    else:
-                        valid = True
-
-                    # make Result
-                    result = Result(
-                        BaseCheck.MEDIUM, valid, (self.section_titles["7.2"]), reasoning
-                    )
-                    ret_val.append(result)
-                    continue  # can't test anything on an external var
-
-                else:
-                    cell_meas_var = ds.variables[cell_meas_var_name]
-                    if not hasattr(cell_meas_var, "units"):
-                        valid = False
-                        reasoning.append(
-                            "Cell measure variable {} is required "
-                            "to have units attribute defined.".format(
-                                cell_meas_var_name
-                            )
-                        )
-                    if not set(cell_meas_var.dimensions).issubset(var.dimensions):
-                        valid = False
-                        reasoning.append(
-                            "Cell measure variable {} must have "
-                            "dimensions which are a subset of "
-                            "those defined in variable {}.".format(
-                                cell_meas_var_name, var.name
-                            )
-                        )
-
-            result = Result(
-                BaseCheck.MEDIUM, valid, (self.section_titles["7.2"]), reasoning
+                external_variables_names = set()
+        except (ValueError, AttributeError):
+            external_variables_names = set()
+        for var in variables:
+            ret_val.append(
+                self._cell_measures_core(
+                    ds,
+                    var,
+                    external_variables_names,
+                    "dataset or external variable",
+                ),
             )
-            ret_val.append(result)
 
         return ret_val
 
@@ -560,8 +482,9 @@ class CF1_7Check(CF1_6Check):
             return self._evaluate_towgs84(attr)
 
         else:  # invoke method from 1.6, as these names are all still valid
-            return super(CF1_7Check, self)._check_grid_mapping_attr_condition(
-                attr, attr_name
+            return super()._check_grid_mapping_attr_condition(
+                attr,
+                attr_name,
             )
 
     def _check_gmattr_existence_condition_geoid_name_geoptl_datum_name(self, var):
@@ -587,7 +510,7 @@ class CF1_7Check(CF1_6Check):
     def _check_gmattr_existence_condition_ell_pmerid_hdatum(self, var):
         """
         If one of reference_ellipsoid_name, prime_meridian_name, or
-        horizontal_datum_name are defined as grid_mapping attributes,
+        horizontal_datum_name, geographic_crs_name are defined as grid_mapping attributes,
         they must all be defined.
 
         :param netCDF4.Variable var
@@ -609,6 +532,7 @@ class CF1_7Check(CF1_6Check):
                     "reference_ellipsoid_name",
                     "prime_meridian_name",
                     "horizontal_datum_name",
+                    "geographic_crs_name",
                 ]
             ]
         ) and (
@@ -617,6 +541,7 @@ class CF1_7Check(CF1_6Check):
                     "reference_ellipsoid_name",
                     "prime_meridian_name",
                     "horizontal_datum_name",
+                    "geographic_crs_name",
                 ]
             ).issubset(_ncattrs)
         ):
@@ -823,7 +748,7 @@ class CF1_7Check(CF1_6Check):
         elif not val.shape:  # single value
             return (False, msg)
 
-        elif not (val.size in (3, 6, 7)):
+        elif val.size not in (3, 6, 7):
             return (False, msg)
 
         else:
@@ -832,18 +757,105 @@ class CF1_7Check(CF1_6Check):
     def check_grid_mapping(self, ds):
         super(CF1_7Check, self).check_grid_mapping.__doc__
         prev_return = super(CF1_7Check, self).check_grid_mapping(ds)
-        grid_mapping_variables = cfutil.get_grid_mapping_variables(ds)
-        for var_name in sorted(grid_mapping_variables):
+        test_ctx = self.get_test_ctx(
+                BaseCheck.HIGH, self.section_titles["5.6"]) 
+        # Get the grid_mapping variable list for Requirements 5.6 [.../9]                
+        grid_mapping_variable_list = [] 
+                         
+        for item in  ds.get_variables_by_attributes(grid_mapping=lambda x: x is not None):
+            # [1/9] The type of the grid_mapping attribute is a string whose value 
+            # is of the following form, in which brackets indicate optional 
+            # text: grid_mapping_name[: coord_var [coord_var ...]][grid_mapping_name: [coord_var ... ]]
+            if not isinstance(item.grid_mapping, str):
+                test_ctx.messages.append("The grid_mapping attribute {} "
+                "is not a string".format(item.grid_mapping))
+                test_ctx.out_of += 1
+            else:    
+                # [2/9] Note that in its simplest form the attribute comprises just 
+                # a grid_mapping_name as a single word.
+                grid_mapping_variable_list.append(regex.findall(r"(\w+)",item.grid_mapping))
+                    
+        # 
+        # Get the CF grid_mapping variables list (== only if the variable exist in the Variables list)                
+        grid_mapping_variables = cfutil.get_grid_mapping_variables(ds)  
+        grid_mapping_variables_coordinates = cfutil.get_grid_mapping_variables_coordinates(ds) 
+          
+        #Check if all grid_mapping variables are listed in the file as expected
+            # [3/9] Each grid_mapping_name is the name of a variable (known as a 
+            # grid mapping variable), which must exist in the file.
+        if len(grid_mapping_variable_list) != len(grid_mapping_variables) + len(grid_mapping_variables_coordinates):
+            test_ctx.messages.append("Not all of the grid_mapping variables exist in the file")
+            test_ctx.out_of += 1
+        
+        test_ctx.score += 1
+         
+        # Get the CF coordinate variables or auxiliary coordinate variables 
+        auxiliary_coordinate_variables = cfutil.get_auxiliary_coordinate_variables(ds)
+        coordinate_variables = cfutil.get_coordinate_variables(ds) 
+        # Check the grid_mapping variable coordinates if listed.
+            # [4/9] Each coord_var is the name of a coordinate variable or 
+            # auxiliary coordinate variable, which must exist in the file. If it 
+            # is an auxiliary coordinate variable, it must be listed in the 
+            # coordinates attribute.    
+        for coord_item in grid_mapping_variables_coordinates:                                                   
+            if coord_item not in coordinate_variables and coord_item not in auxiliary_coordinate_variables:
+                test_ctx.messages.append("{} is not listed as coordinate or auxiliary coord Variable.".format(coord_item))
+                test_ctx.out_of += 1
+        
+        test_ctx.score += 1       
+
+        # Check the gid_mapping variable attributes
+        for var_name in sorted(grid_mapping_variables):           
             var = ds.variables[var_name]
             test_ctx = self.get_test_ctx(
-                BaseCheck.HIGH, self.section_titles["5.6"], var.name
-            )
+                BaseCheck.HIGH, self.section_titles["5.6"], var.name)
+            
+            # Recommendation: The grid mapping variables should have 0 dimensions.
+            if var.dimensions:
+               test_ctx.messages.append("The grid mapping variable {} should have 0 dimension".format(var.name))
+               test_ctx.out_of += 1
+            
+            test_ctx.score += 1
 
+            # [5/9] The grid mapping variables must have the grid_mapping_name attribute. 
+            # The legal values for the grid_mapping_name attribute are contained in Appendix F.
+            if not hasattr(var, "grid_mapping_name"):
+                test_ctx.messages.append("The grid mapping variable "
+                "{} doesn't have the grid_mapping_name attribute".format(var.name))
+                test_ctx.out_of += 1
+            else:
+                if var.grid_mapping_name not in grid_mapping_dict17:
+                   test_ctx.messages.append("The legal values for the grid_mapping_name attribute "
+                    "{} is not contained in Appendix F".format(var.grid_mapping_name))             
+                   test_ctx.out_of += 1
+                
+            test_ctx.score += 1
+
+            # [6/9] The data types of the attributes of the 
+            # grid mapping variable must be specified in Table 1 of Appendix F.
+            type_map = {"S": "str" , "N": ["float64", "int"]}
+            for attrs_name in var.ncattrs():
+                if attrs_name in grid_mapping_attr_types17:
+                    attrs_type = np.dtype(type(getattr(var,attrs_name)))          
+                    attrs_type17 = type_map[grid_mapping_attr_types17[attrs_name]['type']]
+                    if attrs_type17 != attrs_type:
+                        test_ctx.messages.append("The data types of the attributes "
+                        "{} and {} do not match".format(attrs_type17, attrs_type))               
+                        test_ctx.out_of += 1
+                else:
+                    test_ctx.messages.append("The attribute {} "
+                        "does not exist in Table 1 of Appendix F".format(attrs_name))               
+                    test_ctx.out_of += 1
+            test_ctx.score += 1    
+                
             # TODO: check cases where crs_wkt provides part of a necessary
             #       grid_mapping attribute, or where a grid_mapping attribute
             #       overrides what has been provided in crs_wkt.
             # attempt to parse crs_wkt if it is present
-            if "crs_wkt" in var.ncattrs():
+
+            # [7/9] If present, the crs_wkt attribute must be a text string conforming to 
+            # the CRS WKT specification described in reference [OGC_CTS].
+            if hasattr(var, "crs_wkt"):
                 crs_wkt = var.crs_wkt
                 if not isinstance(crs_wkt, str):
                     test_ctx.messages.append("crs_wkt attribute must be a string")
@@ -853,37 +865,40 @@ class CF1_7Check(CF1_6Check):
                         pyproj.CRS.from_wkt(crs_wkt)
                     except pyproj.exceptions.CRSError as crs_error:
                         test_ctx.messages.append(
-                            "Cannot parse crs_wkt attribute to CRS using Proj4. Proj4 error: {}".format(
-                                str(crs_error)
-                            )
+                            f"Cannot parse crs_wkt attribute to CRS using Proj4. Proj4 error: {str(crs_error)}",
                         )
-                    else:
-                        test_ctx.score += 1
-                    test_ctx.out_of += 1
-
+                        test_ctx.out_of += 1                                   
+            test_ctx.score += 1
+ 
             # existence_conditions
+            # Both geoid_name and geopotential_datum_name cannot exist
             exist_cond_1 = (
                 self._check_gmattr_existence_condition_geoid_name_geoptl_datum_name(var)
             )
-            test_ctx.assert_true(exist_cond_1[0], exist_cond_1[1])
+            
+            test_ctx.out_of += 1
+            if not exist_cond_1[0]:
+                test_ctx.messages.append(exist_cond_1[1])
+            else:
+                test_ctx.score += 1
+
+
+            # [8/9] reference_ellipsoid_name, prime_meridian_name, horizontal_datum_name and 
+            # geographic_crs_name must be all defined if any one is defined.
             exist_cond_2 = self._check_gmattr_existence_condition_ell_pmerid_hdatum(var)
-            test_ctx.assert_true(exist_cond_2[0], exist_cond_2[1])
+            
+            test_ctx.out_of += 1
+            if not exist_cond_2[0]:
+                test_ctx.messages.append(exist_cond_2[1])
+            else:
+                test_ctx.score += 1
 
             # handle vertical datum related grid_mapping attributes
             vert_datum_attrs = {}
             possible_vert_datum_attrs = {"geoid_name", "geopotential_datum_name"}
-            vert_datum_attrs = possible_vert_datum_attrs.intersection(var.ncattrs())
-            len_vdatum_name_attrs = len(vert_datum_attrs)
-            # check that geoid_name and geopotential_datum_name are not both
-            # present in the grid_mapping variable
-            if len_vdatum_name_attrs == 2:
-                test_ctx.out_of += 1
-                test_ctx.messages.append(
-                    "Cannot have both 'geoid_name' and "
-                    "'geopotential_datum_name' attributes in "
-                    "grid mapping variable '{}'".format(var.name)
-                )
-            elif len_vdatum_name_attrs == 1:
+            vert_datum_attrs = possible_vert_datum_attrs.intersection(var.ncattrs())                             
+            
+            if exist_cond_1[0] and vert_datum_attrs:              
                 # should be one or zero attrs
                 proj_db_path = os.path.join(pyproj.datadir.get_data_dir(), "proj.db")
                 try:
@@ -891,25 +906,39 @@ class CF1_7Check(CF1_6Check):
                         v_datum_attr = next(iter(vert_datum_attrs))
                         v_datum_value = getattr(var, v_datum_attr)
                         v_datum_str_valid = self._process_v_datum_str(
-                            v_datum_value, conn
+                            v_datum_value,
+                            conn,
                         )
 
                         invalid_msg = (
-                            "Vertical datum value '{}' for "
-                            "attribute '{}' in grid mapping "
-                            "variable '{}' is not valid".format(
-                                v_datum_value, v_datum_attr, var.name
-                            )
+                            f"Vertical datum value '{v_datum_value}' for "
+                            f"attribute '{v_datum_attr}' in grid mapping "
+                            f"variable '{var.name}' is not valid"
                         )
                         test_ctx.assert_true(v_datum_str_valid, invalid_msg)
                 except sqlite3.Error as e:
                     # if we hit an error, skip the check
                     warn(
                         "Error occurred while trying to query "
-                        "Proj4 SQLite database at {}: {}".format(proj_db_path, str(e))
+                        f"Proj4 SQLite database at {proj_db_path}: {str(e)}",
+                        stacklevel=2,
                     )
-            prev_return[var.name] = test_ctx.to_result()
 
+            # [9/9] Check If projected_crs_name is defined then geographic_crs_name must be also.
+            test_possible = {"projected_crs_name","geographic_crs_name"}          
+            if hasattr(var, "projected_crs_name"):
+                test_attr = test_possible.intersection(var.ncattrs())
+                len_test_attr = len(test_attr)
+
+                if len_test_attr != 2:
+                    test_ctx.messages.append("We do not have both projected_crs_name "
+                    "and geographic_crs_name defined")
+                    test_ctx.out_of += 1 
+               
+            test_ctx.score += 1
+            
+            prev_return[var.name] = test_ctx.to_result()
+            
         return prev_return
 
     def check_standard_name_deprecated_modifiers(self, ds):
@@ -921,7 +950,8 @@ class CF1_7Check(CF1_6Check):
         deprecated_var_names = cfutil._find_standard_name_modifier_variables(ds, True)
         if deprecated_var_names:
             warn(
-                f"Deprecated standard_name modifiers found on variables {deprecated_var_names}"
+                f"Deprecated standard_name modifiers found on variables {deprecated_var_names}",
+                stacklevel=2,
             )
 
     def _process_v_datum_str(self, v_datum_str, conn):
@@ -936,7 +966,12 @@ class CF1_7Check(CF1_6Check):
         return len(res_set.fetchall()) > 0
 
     def _check_dimensionless_vertical_coordinate_1_7(
-        self, ds, vname, deprecated_units, ret_val, dim_vert_coords_dict
+        self,
+        ds,
+        vname,
+        deprecated_units,
+        ret_val,
+        dim_vert_coords_dict,
     ):
         """
         Check that a dimensionless vertical coordinate variable is valid under
@@ -951,19 +986,24 @@ class CF1_7Check(CF1_6Check):
         standard_name = getattr(variable, "standard_name", None)
         formula_terms = getattr(variable, "formula_terms", None)
         # Skip the variable if it's dimensional
+        correct_computed_std_name_ctx = TestCtx(
+            BaseCheck.MEDIUM,
+            self.section_titles["4.3"],
+        )
+        # IMPLEMENTATION CONFORMANCE 4.3.3 REQUIRED
+        correct_computed_std_name_ctx.assert_true(
+            not (formula_terms is None and hasattr(variable, "computed_standard_name")),
+            f"Variable {vname} should have formula_terms attribute when "
+            "computed_standard_name attribute is defined",
+        )
         if formula_terms is None and standard_name not in dim_vert_coords_dict:
             return
 
         # assert that the computed_standard_name is maps to the standard_name correctly
-        correct_computed_std_name_ctx = TestCtx(
-            BaseCheck.MEDIUM, self.section_titles["4.3"]
-        )
         _comp_std_name = dim_vert_coords_dict[standard_name][1]
         correct_computed_std_name_ctx.assert_true(
             getattr(variable, "computed_standard_name", None) in _comp_std_name,
-            "§4.3.3 The standard_name of `{}` must map to the correct computed_standard_name, `{}`".format(
-                vname, sorted(_comp_std_name)
-            ),
+            f"§4.3.3 The standard_name of `{vname}` must map to the correct computed_standard_name, `{sorted(_comp_std_name)}`",
         )
         ret_val.append(correct_computed_std_name_ctx.to_result())
 
@@ -1001,7 +1041,7 @@ class CF1_7Check(CF1_6Check):
                 deprecated_units,
                 self._check_dimensionless_vertical_coordinate_1_6,
                 dimless_vertical_coordinates_1_7,
-            )
+            ),
         )
 
         ret_val.extend(
@@ -1010,7 +1050,7 @@ class CF1_7Check(CF1_6Check):
                 deprecated_units,
                 self._check_dimensionless_vertical_coordinate_1_7,
                 dimless_vertical_coordinates_1_7,
-            )
+            ),
         )
 
         return ret_val
