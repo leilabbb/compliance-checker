@@ -819,7 +819,7 @@ class CF1_7Check(CF1_6Check):
 
             # [5/9] The grid mapping variables must have the grid_mapping_name attribute. 
             # The legal values for the grid_mapping_name attribute are contained in Appendix F.
-            if "grid_mapping_name" not in var.ncattrs():
+            if not hasattr(var, "grid_mapping_name"):
                 test_ctx.messages.append("The grid mapping variable "
                 "{} doesn't have the grid_mapping_name attribute".format(var.name))
                 test_ctx.out_of += 1
@@ -833,7 +833,7 @@ class CF1_7Check(CF1_6Check):
 
             # [6/9] The data types of the attributes of the 
             # grid mapping variable must be specified in Table 1 of Appendix F.
-            type_map = {"S": "str" , "N": "float64"}
+            type_map = {"S": "str" , "N": ["float64", "int"]}
             for attrs_name in var.ncattrs():
                 if attrs_name in grid_mapping_attr_types17:
                     attrs_type = np.dtype(type(getattr(var,attrs_name)))          
@@ -855,7 +855,7 @@ class CF1_7Check(CF1_6Check):
 
             # [7/9] If present, the crs_wkt attribute must be a text string conforming to 
             # the CRS WKT specification described in reference [OGC_CTS].
-            if "crs_wkt" in var.ncattrs():
+            if hasattr(var, "crs_wkt"):
                 crs_wkt = var.crs_wkt
                 if not isinstance(crs_wkt, str):
                     test_ctx.messages.append("crs_wkt attribute must be a string")
@@ -926,7 +926,7 @@ class CF1_7Check(CF1_6Check):
 
             # [9/9] Check If projected_crs_name is defined then geographic_crs_name must be also.
             test_possible = {"projected_crs_name","geographic_crs_name"}          
-            if "projected_crs_name" in var.ncattrs():
+            if hasattr(var, "projected_crs_name"):
                 test_attr = test_possible.intersection(var.ncattrs())
                 len_test_attr = len(test_attr)
 
